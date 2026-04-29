@@ -1,0 +1,264 @@
+
+<meta charset="UTF-8">
+<style>
+* { box-sizing: border-box; margin: 0; padding: 0; }
+body { font-family: var(--font-sans); }
+.wrap { max-width: 680px; margin: 0 auto; padding: 1.5rem 1rem; }
+.top-bar { font-size: 13px; color: var(--color-text-secondary); margin-bottom: 1.5rem; display: flex; justify-content: space-between; align-items: center; }
+.score-live { display: flex; gap: 16px; font-size: 13px; }
+.s-ok { color: #1a7a4a; font-weight: 500; }
+.s-bad { color: #c0392b; font-weight: 500; }
+.progress-bar { height: 4px; background: #e5e5e5; border-radius: 2px; margin-bottom: 2rem; }
+.progress-fill { height: 100%; background: #1a7a4a; border-radius: 2px; transition: width 0.3s; }
+.filter-row { display: flex; gap: 8px; flex-wrap: wrap; margin-bottom: 1.5rem; justify-content: center; }
+.filter-btn { font-family: var(--font-sans); font-size: 12px; padding: 5px 14px; border-radius: 20px; border: 1px solid var(--color-border-secondary); background: transparent; color: var(--color-text-secondary); cursor: pointer; transition: all 0.1s; }
+.filter-btn.active, .filter-btn:hover { background: var(--color-background-secondary); border-color: var(--color-border-primary); color: var(--color-text-primary); }
+.oppgave-label { font-size: 13px; font-weight: 500; color: var(--color-text-secondary); margin-bottom: 0.75rem; }
+.question-text { font-size: 17px; line-height: 1.6; color: var(--color-text-primary); margin-bottom: 1.25rem; font-weight: 400; }
+.options { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.25rem; }
+.opt-row { display: flex; align-items: center; gap: 12px; padding: 13px 16px; border: 1.5px solid #d0d0d0; border-radius: 8px; cursor: pointer; transition: border-color 0.12s, background 0.12s; background: var(--color-background-primary); font-size: 15px; color: var(--color-text-primary); text-align: left; font-family: var(--font-sans); width: 100%; }
+.opt-row:hover:not(.locked) { border-color: #888; background: var(--color-background-secondary); }
+.opt-row.locked { cursor: default; }
+.opt-row.is-correct { background: #1a7a4a; border-color: #1a7a4a; color: #fff; }
+.opt-row.is-wrong { background: var(--color-background-primary); border-color: #1a1a1a; border-width: 2px; color: var(--color-text-primary); }
+.radio-icon { width: 20px; height: 20px; border-radius: 50%; border: 2px solid #bbb; display: flex; align-items: center; justify-content: center; flex-shrink: 0; transition: border-color 0.12s; }
+.opt-row:hover:not(.locked) .radio-icon { border-color: #555; }
+.opt-row.is-correct .radio-icon { border-color: #fff; background: #fff; }
+.opt-row.is-wrong .radio-icon { border-color: #1a1a1a; }
+.radio-inner { width: 10px; height: 10px; border-radius: 50%; }
+.opt-row.is-correct .radio-inner { background: #1a7a4a; }
+.check-icon { font-size: 14px; }
+.x-icon { font-size: 14px; }
+.losning { border-radius: 8px; padding: 1rem 1.25rem; margin-bottom: 1.25rem; display: none; font-size: 14px; line-height: 1.6; }
+.losning.show { display: block; }
+.losning.ok { background: #eaf6f0; color: #1a5c38; border-left: 4px solid #1a7a4a; }
+.losning.bad { background: #fdecea; color: #8b1a1a; border-left: 4px solid #c0392b; }
+.losning-title { font-weight: 600; font-size: 13px; margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.04em; }
+.btn-row { display: flex; gap: 10px; justify-content: space-between; align-items: center; }
+button.nav { font-family: var(--font-sans); font-size: 14px; padding: 9px 20px; border-radius: 8px; border: 1px solid #ccc; background: transparent; color: var(--color-text-primary); cursor: pointer; transition: background 0.1s; }
+button.nav:hover { background: var(--color-background-secondary); }
+button.nav:disabled { opacity: 0.3; cursor: default; }
+button.nav.primary { background: #1a1a1a; color: #fff; border-color: #1a1a1a; }
+button.nav.primary:hover { background: #333; }
+
+/* Results */
+.results { display: none; }
+.results.show { display: block; }
+.score-box { text-align: center; padding: 2.5rem 1rem; border-bottom: 1px solid var(--color-border-tertiary); margin-bottom: 1.5rem; }
+.score-pct { font-size: 56px; font-weight: 500; color: var(--color-text-primary); }
+.score-counts { display: flex; justify-content: center; gap: 24px; margin-top: 10px; font-size: 15px; }
+.score-msg { font-size: 15px; color: var(--color-text-secondary); margin-top: 8px; }
+.res-list { display: flex; flex-direction: column; gap: 10px; margin-bottom: 1.5rem; }
+.res-item { border-radius: 8px; padding: 12px 16px; font-size: 13px; line-height: 1.5; }
+.res-item .ri-meta { font-size: 11px; font-weight: 600; text-transform: uppercase; letter-spacing: 0.05em; margin-bottom: 5px; opacity: 0.75; }
+.res-item .ri-q { font-weight: 500; margin-bottom: 4px; font-size: 14px; }
+.res-item .ri-ans { margin-top: 4px; }
+.res-item .ri-exp { margin-top: 6px; opacity: 0.9; }
+.res-ok { background: #eaf6f0; color: #1a5c38; }
+.res-bad { background: #fdecea; color: #8b1a1a; }
+</style>
+
+<div class="wrap">
+  <h2 style="position:absolute;width:1px;height:1px;overflow:hidden">Quiz: Organisasjonsatferd og ledelse</h2>
+
+  <div class="filter-row" id="filters"></div>
+
+  <div id="main-quiz">
+    <div class="progress-bar"><div class="progress-fill" id="prog"></div></div>
+    <div class="top-bar">
+      <span id="ctr" style="font-weight:500;color:var(--color-text-primary)"></span>
+      <span class="score-live"><span class="s-ok" id="s-ok">0 riktige</span><span class="s-bad" id="s-bad">0 feil</span></span>
+    </div>
+
+    <div class="oppgave-label" id="qtag"></div>
+    <div class="question-text" id="qtext"></div>
+    <div class="options" id="options"></div>
+    <div class="losning" id="losning">
+      <div class="losning-title">Losningsforslag</div>
+      <div id="losning-text"></div>
+    </div>
+    <div class="btn-row">
+      <button class="nav" id="btn-prev" onclick="prev()">&#8592; Forrige</button>
+      <button class="nav" id="btn-next" onclick="next()" disabled>Neste &#8594;</button>
+      <button class="nav primary" id="btn-finish" onclick="showResults()" style="display:none">Se resultater</button>
+    </div>
+  </div>
+
+  <div class="results" id="results">
+    <div class="score-box">
+      <div class="score-pct" id="res-pct"></div>
+      <div class="score-counts">
+        <span class="s-ok" id="res-ok"></span>
+        <span class="s-bad" id="res-bad"></span>
+      </div>
+      <div class="score-msg" id="res-msg"></div>
+    </div>
+    <div class="res-list" id="res-list"></div>
+    <div class="btn-row">
+      <button class="nav" onclick="restart()">Ta quizen igjen</button>
+      <button class="nav primary" id="btn-wrong" onclick="restartWrong()">Oev pa feil</button>
+    </div>
+  </div>
+</div>
+
+<script>
+var ALL_Q = [
+  { tag:"Kognisjon", q:"Hva er System-1 tenkning?", correct:"Ubevisst, rask og automatisk tenkning", wrong:["Bevisst, langsom og grundig vurdering","Lagring av informasjon i langtidshukommelsen","Evnen til a fokusere pa en ting om gangen"], exp:"System-1 er den automatiske, intuitive delen av tenkningen. System-2 er den langsomme, bevisste analysedelen." },
+  { tag:"Kognisjon", q:"Hva er System-2 tenkning?", correct:"Bevisst, langsom og grundig vurdering av fakta", wrong:["Ubevisst, rask og automatisk tenkning","Tolkning av sanser basert pa erfaring","Multitasking og delt oppmerksomhet"], exp:"System-2 krever bevisst innsats og brukes til kompleks problemlosning og logisk resonnering." },
+  { tag:"Persepsjon", q:"Hva beskriver den perseptuelle syklusen?", correct:"Samspillprosess mellom hjernen og miljoet som skaper kognitive skjemaer", wrong:["Lagring av informasjon fra sansene i langtidsminnet","Ubevisst tenkning som styrer atferd","Tolkning av andres handlinger basert pa egne erfaringer"], exp:"Den perseptuelle syklusen viser at hjernen tolker aktivt basert pa tidligere erfaringer og lagrer dette som kognitive skjemaer." },
+  { tag:"Persepsjon", q:"Hva er direkte persepsjon?", correct:"Vi oppfatter omgivelsene slik de er i virkeligheten, uten tolkning", wrong:["Vi opplever verden gjennom vare tidligere opplevelser","Vi oppfatter persepsjon som mentale konstruksjoner","Vi tolker sanser basert pa forventninger"], exp:"Direkte persepsjon er teorien om at vi oppfatter verden slik den faktisk er, uten at vi trenger a tolke eller bearbeide sanseinntrykk saerlig mye." },
+  { tag:"Hukommelse", q:"Hva er rekkefølgen i tre-trinns hukommelsesmodellen?", correct:"Sensorisk hukommelse, korttidshukommelse, langtidshukommelse", wrong:["Korttidshukommelse, sensorisk, langtidshukommelse","Langtidshukommelse, korttidshukommelse, sensorisk","Sensorisk hukommelse, langtidshukommelse, korttidshukommelse"], exp:"Informasjon registreres sensorisk, bearbeides i korttidshukommelsen og lagres permanent i langtidshukommelsen ved repetisjon." },
+  { tag:"Personlighet", q:"Hvilke fem trekk inngaar i Femfaktormodellen (Big Five)?", correct:"Nevrotisisme, ekstroversjon, aapenhet, omgjengelighet, planmessighet", wrong:["Intelligens, kreativitet, motivasjon, tillit, empati","Lederevne, sosialitet, fleksibilitet, stabilitet, aapenhet","Autonomi, kompetanse, tilhørighet, planmessighet, aapenhet"], exp:"Big Five er den mest brukte modellen for personlighet. Huskeregel: OCEAN (Openness, Conscientiousness, Extraversion, Agreeableness, Neuroticism)." },
+  { tag:"Personlighet", q:"Hva maaler planmessighet i Femfaktormodellen?", correct:"I hvilken grad man er pliktoppfyllende, systematisk og paalitelig", wrong:["Preferanse for sosial omgang","Evnen til a haandtere egne folelser","Grad av aapenhet for nye erfaringer"], exp:"Planmessighet (conscientiousness) er den faktoren som best predikerer jobbprestasjoner pa tvers av yrker." },
+  { tag:"Emosjoner", q:"Hva er rekkefølgen i Lazarus emosjonsrespons?", correct:"Utlosende stimuli, kognitiv vurdering, fysiologiske responser, instrumental atferd, ekspressiv atferd", wrong:["Kognitiv vurdering, stimuli, fysiologisk respons, atferd","Stimuli, atferd, kognitiv vurdering, fysiologisk respons","Fysiologisk respons, stimuli, kognitiv vurdering, atferd"], exp:"Lazarus understreker at den kognitive vurderingen er avgjoerende. To personer kan oppleve samme stimuli men reagere helt ulikt." },
+  { tag:"Intelligens", q:"Hva er flytende intelligens?", correct:"Evnen til a identifisere og bruke informasjon for a lose nye problemer", wrong:["Kunnskap og ferdigheter man har laert seg","Evnen til a identifisere og haandtere andres folelser","Evnen til a tenke raskt og automatisk"], exp:"Flytende intelligens handler om a resonnere i nye situasjoner. Krystallisert intelligens er akkumulert kunnskap og erfaring." },
+  { tag:"Intelligens", q:"Hva er emosjonell intelligens (EQ)?", correct:"Evnen til a identifisere og haandtere egne og andres folelser", wrong:["Evnen til a lose abstrakte problemer raskt","Kunnskap man har tilegnet seg gjennom erfaring","Evnen til a laere gjennom sosiale interaksjoner"], exp:"EQ maales pa fire dimensjoner: identifisere, forsta, bruke og styre folelser. Hoy EQ er sterkt knyttet til ledereffektivitet." },
+  { tag:"Holdninger", q:"Hva er kognitiv dissonans?", correct:"Naar en holdning og en handling er i ubalanse", wrong:["Tendens til a soke informasjon som bekrefter egne antagelser","Feiltolkning av sensorisk informasjon i hjernen","Overvurdering av egne evner i en situasjon"], exp:"Kognitiv dissonans skaper ubehag. Hjernen loser dette ved a endre holdning, endre atferd, eller rasjonalisere bort konflikten." },
+  { tag:"Holdninger", q:"Hva sier den fundamentale attribusjonsfellen?", correct:"Andres daarlige handlinger skyldes personlige egenskaper, egne skyldes omgivelsene", wrong:["Man overvurderer sannsynligheten for kjente hendelser","Man baserer beslutninger pa et mentalt anker","Man ser sammenhenger som ikke eksisterer"], exp:"Attribusjonsfellen gjor at vi er for raske til a domme andre, mens vi har mange unnskyldninger for vaar egen daarlige atferd." },
+  { tag:"Beslutninger", q:"Hva er sunk cost-fellen?", correct:"Man lar tidligere investeringer styre fremtidige beslutninger", wrong:["Man godtar kun informasjon som bekrefter egne antagelser","Man er partisk mot kjente og etablerte losninger","Man overvurderer egen vurdering av en situasjon"], exp:"Klassisk eksempel: fortsette a se en kjedelig film fordi man allerede har betalt. Rasjonelt bor kun fremtidige kostnader og gevinster telle." },
+  { tag:"Beslutninger", q:"Hva er bekreftelsesfellen?", correct:"Man godtar informasjon som bekrefter antagelsene og forkaster det som avkrefter dem", wrong:["Man lar tidligere investeringer styre fremtidige valg","Man tror noe er mer sannsynlig fordi man husker det lett","Man er partisk mot det som er kjent og vanlig"], exp:"Bekreftelsesfellen er saerlig farlig i ledelse. Man kan overse viktige advarselsignaler fordi de ikke passer med hva man allerede tror." },
+  { tag:"Beslutninger", q:"Hva er status quo-fellen?", correct:"Man er svart partisk mot beslutninger som endrer det kjente eller vanlige", wrong:["Man setter et mentalt anker som pavirker alle valg","Man godtar info som bekrefter egne antagelser","Man tror det er storre sannsynlighet for det man lett husker"], exp:"Status quo-fellen gjor endring i organisasjoner vanskelig. Folk foretrekker det eksisterende selv naar alternativet er bedre." },
+  { tag:"Laering", q:"Hva skiller dobbelkretslaring fra enkelkretslaring?", correct:"Dobbelkretslaring reflekterer over og retter aarsaken til problemet, enkelkrets retter bare avviket", wrong:["Dobbelkretslaring skjer i grupper, enkelkretslaring individuelt","Dobbelkretslaring er raskere og mer automatisk","Enkelkretslaring er dypere og mer refleksiv"], exp:"Argyris utviklet disse begrepene. Eksempel: termostat som slar pa varmen (enkelkrets) vs. a sporre om vi trenger varme (dobbelkrets)." },
+  { tag:"Laering", q:"Hva beskriver Kolbs laeringssirkel?", correct:"Fire faser: konkrete erfaringer, refleksjon, generalisering, eksperimentering", wrong:["Tre behov som driver indre motivasjon","Fem ledelsesstiler tilpasset ulike situasjoner","Samspill mellom krav og ressurser i arbeidslivet"], exp:"Kolbs modell viser at laering er syklisk. Man laerer best ved a gjore noe, reflektere, trekke slutninger og prove i nye situasjoner." },
+  { tag:"Motivasjon", q:"Hva er indre motivasjon?", correct:"Handlingen i seg selv er motivasjon nok, ingen ytre belonning trengs", wrong:["Man gjennomforer handlingen fordi man forventer belonning","Motivasjon for a hjelpe andre uten a forvente noe igjen","Man sammenligner egne prestasjoner med andres"], exp:"Indre motivasjon er knyttet til hoyere kvalitet og kreativitet. Ytre belonning kan faktisk underminere indre motivasjon." },
+  { tag:"Motivasjon", q:"Hva er de tre behovene i selvbestemmelsesteorien?", correct:"Autonomi, kompetanse og tilhorighet", wrong:["Fysiologiske behov, sikkerhet og selvrealisering","Forventning, instrumentalitet og valens","Motivasjonsfaktorer, hygienefaktorer og kontekst"], exp:"Deci og Ryan: alle tre behov ma dekkes for at indre motivasjon skal blomstre. Mangel pa ett av dem svekker motivasjonen." },
+  { tag:"Motivasjon", q:"Hva er forventningsteorien?", correct:"Motivasjon = Forventning x Instrumentalitet x Valens", wrong:["Motivasjon drives av tre medfodte behov","Motivasjon avhenger av balansen mellom krav og ressurser","Motivasjon skapes gjennom sammenligning med andres prestasjoner"], exp:"Vrooms teori: alle tre faktorer ma vaere til stede for at motivasjon skal oppsta." },
+  { tag:"Motivasjon", q:"Hva er Maslows overste nivaa i behovspyramiden?", correct:"Selvrealisering: utnytte sitt fulle potensial", wrong:["Aktelsesbehov: anerkjennelse fra andre","Tilhorighetsbehov: aksept og fellesskap","Sikkerhetsbehov: trygghet og stabilitet"], exp:"Maslow mente at lavere behov ma dekkes for hoyere nivaaer motiverer. Selvrealisering er toppen av pyramiden." },
+  { tag:"Jobbtilfredshet", q:"Hva kjennetegner hygienefaktorer i Herzbergs tofaktorteori?", correct:"Fravaer demotiverer, men tilstedevarelse gir ikke okt motivasjon", wrong:["Gir okt motivasjon naar de er tilstede, men fravaer demotiverer ikke","Er de eneste faktorene som skaper varig jobbtilfredshet","Motiverer kun eksternt gjennom belonning og straff"], exp:"Hygienefaktorer som lonn og arbeidsforhold fjerner misnoe, men skaper ikke engasjement. Motivasjonsfaktorene driver tilfredshet." },
+  { tag:"Jobbengasjement", q:"Hva skiller jobbengasjement fra jobbtilfredshet?", correct:"Jobbengasjement er synlig arbeidsglede, jobbtilfredshet er usynlig og indre opplevelse", wrong:["Jobbengasjement handler om lonn, jobbtilfredshet om relasjoner","Jobbtilfredshet er synlig, jobbengasjement er usynlig","De er to ord for samme fenomen"], exp:"En ansatt kan vaere tilfreds uten a vaere engasjert. Engasjement vises i atferd som energi, dedikasjon og fordypelse i arbeidet." },
+  { tag:"Grupper", q:"Hva er Tuckmans fasemodell?", correct:"Forming, storming, norming, performing, adjourning", wrong:["Mobilisering, endring, stabilisering","Identifisere, strategisere, vurdere","Forming, norming, storming, performing, adjourning"], exp:"Tuckman: alle grupper gar gjennom disse fasene. Storming-fasen er nodvendig for a komme til performing." },
+  { tag:"Grupper", q:"Hva er gruppetenkning?", correct:"Beslutningsfelle der gruppen prioriterer enighet fremfor kritisk tenkning", wrong:["Tendens til at individer yter mindre i grupper","Konflikt mellom ulike normer i en gruppe","Prosessen der grupper velger leder under storming-fasen"], exp:"Gruppetenkning er farlig fordi gruppen tror den tar gode beslutninger. Kjennetegn: ingen stiller sporsmal, illusjon av enighet." },
+  { tag:"Grupper", q:"Hva er sosial loffing?", correct:"Individer yter mindre innsats i grupper enn alene", wrong:["Grupper er mer opptatt av a vaere enige enn aerlige","Individer overtar andres meninger under gruppepress","Konflikter som oppstar i storming-fasen"], exp:"Sosial loffing oker med gruppestorrelse og naar individuell innsats er vanskelig a maale. Tiltak: tydelige individuelle roller." },
+  { tag:"Tillit", q:"Hva er identifikasjonsbasert tillit?", correct:"Tillit som er bygget opp gjennom relasjon over tid", wrong:["Tillit basert pa at brudd har negative konsekvenser","Tillit som oppstar plutselig i krisesituasjoner","Tillit som er tildelt gjennom formell posisjon"], exp:"Identifikasjonsbasert tillit er den dypeste formen. Den tar lang tid a bygge og kan raskt odelegges." },
+  { tag:"Konflikter", q:"Pa hvilke tre nivaaer eskalerer Glasls konfliktmodell?", correct:"Saksnivaa, personsnivaa, full synergikonflikt", wrong:["Frustrasjon, dialog, eskalasjon","Sak, motstand, varsling","Individuelt, gruppe, organisasjonsnivaa"], exp:"Glasl beskriver 9 trinn. Nøkkelen er a gripe inn tidlig. Pa saksnivaa kan partene lose konflikten selv." },
+  { tag:"Organisasjon", q:"Hva er Competing Values Framework?", correct:"Fire kulturtyper: klan, adhokrati, hierarki og marked", wrong:["Aatte steg for vellykket organisasjonsendring","Modell for funksjonsdeling mellom toppledelse og operativ kjerne","Tre faser i organisasjoners livssyklus"], exp:"Quinn og Rohrbaugh kategoriserte kulturer langs to akser: fleksibilitet vs. stabilitet, og intern vs. ekstern fokus." },
+  { tag:"Organisasjon", q:"Hva er forskjellen pa sentralisering og desentralisering?", correct:"Sentralisering gir kontroll, desentralisering gir fleksibilitet og raskere tilpasning", wrong:["Sentralisering gir innovasjon, desentralisering gir stabilitet","Sentralisering er for smaa bedrifter, desentralisering for store","Sentralisering handler om geografisk plassering av ansatte"], exp:"I praksis kombineres begge. Strategiske beslutninger sentraliseres, operative beslutninger desentraliseres." },
+  { tag:"Endring", q:"Hva er Kotters forste steg i endringsmodellen?", correct:"Skap kriseforstaelse", wrong:["Bygg en sterk allianse","Utvikle en visjon","Kommuniser visjonen"], exp:"Kotter: de fleste endringsinitiativ feiler fordi folk ikke forstaar hvorfor endringen er nodvendig." },
+  { tag:"Endring", q:"Hva er Lewins tre-fase-modell for endring?", correct:"Mobilisering, endring og stabilisering", wrong:["Forming, storming, norming","Kriseforstaelse, visjon, institusjonalisering","Diagnose, intervensjon, evaluering"], exp:"Lewin sammenlignet endring med is: tine (mobilisering), forme (endring) og fryse igjen (stabilisering)." },
+  { tag:"Ledelse", q:"Hva kjennetegner transformasjonsledelse?", correct:"Karismatisk, visjonaer ledelse rettet mot innovasjon og endring", wrong:["Bytteforhold mellom ansatt og organisasjon for okt effektivitet","Tilpasning av lederstil til medarbeiderens utviklingsnivaa","Fokus pa orden, struktur og oppgaveovervaaking"], exp:"Transformasjonsledere inspirerer til a overskride egeninteresse for et storre maal. Motsetningen er transaksjonsledelse." },
+  { tag:"Ledelse", q:"Hva er LMX-ledelse?", correct:"Leader-Member Exchange: fokus pa kvaliteten i relasjonen mellom leder og medarbeider", wrong:["Leder tilpasser stilen til situasjonen og oppgavens kompleksitet","Leder inspirerer gjennom karisma og visjon","Leder styrer gjennom belonning og straff"], exp:"LMX-teorien viser at ledere utvikler ulike relasjoner til ulike medarbeidere. Hoy LMX-kvalitet gir hoyere tilfredshet og ytelse." },
+  { tag:"Ledelse", q:"Hvilken ledelsesstil passer for en medarbeider med hoy kompetanse og hoy forpliktelse (U4)?", correct:"Delegerende: lite stottende og lite styrende", wrong:["Instruerende: svaert styrende og lite stottende","Coachende: svaert stottende og svaert styrende","Deltakende: svaert stottende og lite styrende"], exp:"Blanchards modell: U1=Instruerende, U2=Coachende, U3=Deltakende, U4=Delegerende. En kompetent og motivert medarbeider trenger verken sterk styring eller mye stotte." },
+  { tag:"Ledelse", q:"Hva er tyrannisk ledelse?", correct:"Overfokus paa aa naa maal paa bekostning av de ansatte", wrong:["Passiv leder som ikke engasjerer seg","Selvopptatt leder som ignorerer arbeidsplassen","Overfokus paa ansatte paa bekostning av organisasjonen"], exp:"Tyrannisk ledelse er destruktiv. Lederen oppnaar kanskje resultater paa kort sikt, men odelegger tillit og trivsel over tid." },
+  { tag:"Makt", q:"Hva er referentmakt?", correct:"Paavirkningskraft man har fordi andre ser opp til deg", wrong:["Formell makt tildelt av organisasjonen","Makt basert paa faglig ekspertise","Makt som oppstaar naar man besitter eksklusiv informasjon"], exp:"Referentmakt er den mest personlige maktbasen. Den kan ikke tildeles, bare optjenes gjennom relasjoner og atferd." },
+  { tag:"Makt", q:"Hva er ekspertmakt?", correct:"Okt paavirkning fordi man er ekspert paa et fagomraade", wrong:["Makt gjennom evnen til aa belonne andre","Formell makt delegert av overordnede","Makt basert paa personlighet og karisma"], exp:"Ekspertmakt er saerlig relevant i kunnskapsorganisasjoner. En ansatt uten formell autoritet kan ha stor innflytelse gjennom kritisk kompetanse." },
+  { tag:"Mangfold", q:"Hva er sosial identitetsteori?", correct:"Mennesker kategoriserer andre i inn-grupper (like seg selv) og ut-grupper (ulike seg selv)", wrong:["Teorien om at mangfold alltid forer til bedre beslutninger","Modell for hvordan ledere haandterer kulturforskjeller","Beskrivelse av hvordan konflikter eskalerer i grupper"], exp:"Tajfel og Turner: inn-/ut-gruppetenkning forer til favorisering av egne og stereotypisering av andre, direkte relevant for fordommer i arbeidslivet." }
+];
+
+var TAGS = ["Alle"];
+ALL_Q.forEach(function(q){ if(TAGS.indexOf(q.tag)<0) TAGS.push(q.tag); });
+var activeTag="Alle", questions=[], idx=0, answers=[];
+
+function shuffle(arr){ var a=arr.slice(); for(var i=a.length-1;i>0;i--){var j=Math.floor(Math.random()*(i+1));var t=a[i];a[i]=a[j];a[j]=t;} return a; }
+function buildQ(pool){ return pool.map(function(q){ return Object.assign({},q,{opts:shuffle([q.correct].concat(q.wrong)),chosen:null}); }); }
+
+function setTag(t){
+  activeTag=t; renderFilters();
+  var pool=t==="Alle"?ALL_Q:ALL_Q.filter(function(q){return q.tag===t;});
+  questions=buildQ(shuffle(pool)); idx=0; answers=[];
+  document.getElementById("results").classList.remove("show");
+  document.getElementById("main-quiz").style.display="";
+  update();
+}
+function restart(){
+  var pool=activeTag==="Alle"?ALL_Q:ALL_Q.filter(function(q){return q.tag===activeTag;});
+  questions=buildQ(shuffle(pool)); idx=0; answers=[];
+  document.getElementById("results").classList.remove("show");
+  document.getElementById("main-quiz").style.display="";
+  update();
+}
+function restartWrong(){
+  var wrong=answers.filter(function(a){return !a.correct;}).map(function(a){return ALL_Q.find(function(q){return q.q===a.q;});}).filter(Boolean);
+  if(!wrong.length) return;
+  questions=buildQ(shuffle(wrong)); idx=0; answers=[];
+  document.getElementById("results").classList.remove("show");
+  document.getElementById("main-quiz").style.display="";
+  update();
+}
+function renderFilters(){
+  document.getElementById("filters").innerHTML=TAGS.map(function(t){
+    return '<button class="filter-btn '+(t===activeTag?'active':'')+'" onclick="setTag(\''+t+'\')">'+t+'</button>';
+  }).join("");
+}
+
+function update(){
+  var q=questions[idx];
+  document.getElementById("qtag").textContent="Oppgave "+(idx+1)+":  "+q.tag;
+  document.getElementById("qtext").textContent=q.q;
+  document.getElementById("prog").style.width=(idx/questions.length*100).toFixed(0)+"%";
+  document.getElementById("ctr").textContent=(idx+1)+" av "+questions.length;
+  var ok=answers.filter(function(a){return a.correct;}).length;
+  var bad=answers.filter(function(a){return !a.correct;}).length;
+  document.getElementById("s-ok").textContent=ok+" riktige";
+  document.getElementById("s-bad").textContent=bad+" feil";
+  var answered=q.chosen!==null;
+
+  document.getElementById("options").innerHTML=q.opts.map(function(o,i){
+    var cls="opt-row";
+    var iconHTML='<div class="radio-icon"><div class="radio-inner"></div></div>';
+    if(answered){
+      cls+=" locked";
+      if(o===q.correct){
+        cls+=" is-correct";
+        iconHTML='<div class="radio-icon" style="background:#fff;border-color:#fff"><span class="check-icon" style="color:#1a7a4a;font-size:13px">&#10003;</span></div>';
+      } else if(o===q.chosen){
+        cls+=" is-wrong";
+        iconHTML='<div class="radio-icon" style="border-color:#1a1a1a"><span class="x-icon" style="font-size:12px">&#10005;</span></div>';
+      }
+    }
+    return '<button class="'+cls+'" onclick="choose('+i+')">'+iconHTML+'<span>'+o+'</span></button>';
+  }).join("");
+
+  var losEl=document.getElementById("losning");
+  var losText=document.getElementById("losning-text");
+  if(answered){
+    var isOk=q.chosen===q.correct;
+    losEl.className="losning show "+(isOk?"ok":"bad");
+    losText.textContent=q.exp;
+  } else {
+    losEl.className="losning";
+  }
+
+  var isLast=idx===questions.length-1;
+  document.getElementById("btn-next").disabled=!answered||isLast;
+  document.getElementById("btn-prev").disabled=idx===0;
+  document.getElementById("btn-finish").style.display=(answered&&isLast)?"":"none";
+  document.getElementById("btn-next").style.display=(answered&&isLast)?"none":"";
+}
+
+function choose(i){
+  var q=questions[idx];
+  if(q.chosen!==null) return;
+  q.chosen=q.opts[i];
+  var isCorrect=q.chosen===q.correct;
+  answers.push({q:q.q,chosen:q.chosen,correct:isCorrect,correctAns:q.correct,tag:q.tag,exp:q.exp});
+  update();
+}
+function next(){if(idx<questions.length-1){idx++;update();}}
+function prev(){if(idx>0){idx--;update();}}
+
+function showResults(){
+  document.getElementById("main-quiz").style.display="none";
+  document.getElementById("results").classList.add("show");
+  var ok=answers.filter(function(a){return a.correct;}).length;
+  var bad=answers.filter(function(a){return !a.correct;}).length;
+  var pct=Math.round(ok/answers.length*100);
+  document.getElementById("res-pct").textContent=pct+"%";
+  document.getElementById("res-ok").textContent=ok+" riktige";
+  document.getElementById("res-bad").textContent=bad+" feil";
+  var msg=pct>=80?"Solid jobbet!":pct>=50?"Ikke verst, oev mer paa de rode.":"Fortsett aa oeve, du klarer det!";
+  document.getElementById("res-msg").textContent=msg;
+  document.getElementById("res-list").innerHTML=answers.map(function(a){
+    return '<div class="res-item '+(a.correct?'res-ok':'res-bad')+'">'
+      +'<div class="ri-meta">'+a.tag+' &mdash; '+(a.correct?"Riktig":"Feil")+'</div>'
+      +'<div class="ri-q">'+a.q+'</div>'
+      +(!a.correct?'<div class="ri-ans">Ditt svar: '+a.chosen+'<br>Riktig: '+a.correctAns+'</div>':"")
+      +'<div class="ri-exp">'+a.exp+'</div>'
+      +'</div>';
+  }).join("");
+  document.getElementById("btn-wrong").style.display=bad>0?"":"none";
+}
+
+renderFilters();
+questions=buildQ(shuffle(ALL_Q));
+update();
+</script>
